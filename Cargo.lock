@@ -408,27 +408,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "erc20-test"
-version = "0.1.0"
-dependencies = [
- "casper-contract",
- "casper-erc20",
- "casper-types",
-]
-
-[[package]]
-name = "erc20-test-call"
-version = "0.1.0"
-dependencies = [
- "base64",
- "blake2",
- "casper-contract",
- "casper-erc20",
- "casper-types",
- "hex",
-]
-
-[[package]]
 name = "erc20-tests"
 version = "0.1.0"
 dependencies = [
@@ -1229,16 +1208,6 @@ dependencies = [
  "redox_syscall",
  "remove_dir_all",
  "winapi",
-]
-
-[[package]]
-name = "tests"
-version = "0.1.0"
-dependencies = [
- "casper-engine-test-support",
- "casper-execution-engine",
- "casper-types",
- "once_cell",
 ]
 
 [[package]]
