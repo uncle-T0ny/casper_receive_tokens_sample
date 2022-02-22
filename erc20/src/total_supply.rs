@@ -3,11 +3,16 @@
 use casper_contract::{contract_api::storage, unwrap_or_revert::UnwrapOrRevert};
 use casper_types::{URef, U256};
 
-use crate::{constants::TOTAL_SUPPLY_KEY_NAME, detail};
+use crate::{constants::TOTAL_SUPPLY_KEY_NAME, detail, MAIN_PURSE_KEY_NAME};
 
 #[inline]
 pub(crate) fn total_supply_uref() -> URef {
     detail::get_uref(TOTAL_SUPPLY_KEY_NAME)
+}
+
+#[inline]
+pub(crate) fn main_purse_uref() -> URef {
+    detail::get_uref(MAIN_PURSE_KEY_NAME)
 }
 
 /// Reads a total supply from a specified [`URef`].

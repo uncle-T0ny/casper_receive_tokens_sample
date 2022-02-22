@@ -14,6 +14,8 @@ pub const BALANCES_KEY_NAME: &str = "balances";
 pub const ALLOWANCES_KEY_NAME: &str = "allowances";
 /// Name of named-key for `total_supply`
 pub const TOTAL_SUPPLY_KEY_NAME: &str = "total_supply";
+/// main purse
+pub const MAIN_PURSE_KEY_NAME: &str = "main_purse";
 
 /// Name of `name` entry point.
 pub const NAME_ENTRY_POINT_NAME: &str = "name";
@@ -33,6 +35,12 @@ pub const ALLOWANCE_ENTRY_POINT_NAME: &str = "allowance";
 pub const TRANSFER_FROM_ENTRY_POINT_NAME: &str = "transfer_from";
 /// Name of `total_supply` entry point.
 pub const TOTAL_SUPPLY_ENTRY_POINT_NAME: &str = "total_supply";
+
+/// Test
+pub const TESTING_CSPR_TRANSFER_ENTRY_POINT_NAME: &str = "testing_cspr_transfer";
+
+/// Test
+pub const TESTING_ERC20_TRANSFER_ENTRY_POINT_NAME: &str = "testing_erc20_transfer";
 
 /// Name of `address` runtime argument.
 pub const ADDRESS_RUNTIME_ARG_NAME: &str = "address";

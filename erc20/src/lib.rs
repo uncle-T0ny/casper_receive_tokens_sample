@@ -9,6 +9,7 @@
 //! cargo install cargo-casper
 //! cargo casper --erc20 <PATH TO NEW PROJECT>
 //! ```
+#![feature(once_cell)]
 
 #![warn(missing_docs)]
 #![no_std]
@@ -28,11 +29,9 @@ use alloc::string::{String, ToString};
 
 use once_cell::unsync::OnceCell;
 
-use casper_contract::{
-    contract_api::{runtime, storage},
-    unwrap_or_revert::UnwrapOrRevert,
-};
-use casper_types::{contracts::NamedKeys, EntryPoints, Key, URef, U256};
+use casper_contract::{contract_api::{runtime, storage}, unwrap_or_revert::UnwrapOrRevert};
+use casper_contract::contract_api::system;
+use casper_types::{contracts::NamedKeys, EntryPoints, Key, URef, U256, U512, RuntimeArgs, runtime_args, ContractHash, ApiError};
 
 pub use address::Address;
 use constants::{
@@ -40,21 +39,23 @@ use constants::{
     NAME_KEY_NAME, SYMBOL_KEY_NAME, TOTAL_SUPPLY_KEY_NAME,
 };
 pub use error::Error;
+use crate::constants::MAIN_PURSE_KEY_NAME;
 
-/// Implementation of ERC20 standard functionality.
 #[derive(Default)]
 pub struct ERC20 {
     balances_uref: OnceCell<URef>,
     allowances_uref: OnceCell<URef>,
     total_supply_uref: OnceCell<URef>,
+    main_purse: OnceCell<URef>,
 }
 
 impl ERC20 {
-    fn new(balances_uref: URef, allowances_uref: URef, total_supply_uref: URef) -> Self {
+    fn new(balances_uref: URef, allowances_uref: URef, total_supply_uref: URef, main_purse: URef) -> Self {
         Self {
             balances_uref: balances_uref.into(),
             allowances_uref: allowances_uref.into(),
             total_supply_uref: total_supply_uref.into(),
+            main_purse: main_purse.into(),
         }
     }
 
@@ -62,6 +63,12 @@ impl ERC20 {
         *self
             .total_supply_uref
             .get_or_init(total_supply::total_supply_uref)
+    }
+
+    fn read_main_purse_uref(&self) -> URef {
+        *self
+            .main_purse
+            .get_or_init(total_supply::main_purse_uref)
     }
 
     fn read_total_supply(&self) -> U256 {
@@ -145,6 +152,11 @@ impl ERC20 {
     /// Returns the total supply of the token.
     pub fn total_supply(&self) -> U256 {
         self.read_total_supply()
+    }
+
+    /// Returns the total supply of the token.
+    pub fn main_purse_uref(&self) -> URef {
+        self.read_main_purse_uref()
     }
 
     /// Returns the balance of `owner`.
@@ -297,8 +309,13 @@ impl ERC20 {
         named_keys.insert(ALLOWANCES_KEY_NAME.to_string(), allowances_dictionary_key);
         named_keys.insert(TOTAL_SUPPLY_KEY_NAME.to_string(), total_supply_key);
 
+        let purse = system::create_purse();
+
+        named_keys.insert(MAIN_PURSE_KEY_NAME.to_string(), purse.into());
+
         let (contract_hash, _version) =
             storage::new_locked_contract(entry_points, Some(named_keys), None, None);
+
 
         // Hash of the installed contract will be reachable through named keys.
         runtime::put_key(contract_key_name, Key::from(contract_hash));
@@ -307,6 +324,77 @@ impl ERC20 {
             balances_uref,
             allowances_uref,
             total_supply_uref,
+            purse,
         ))
     }
 }
+
+#[no_mangle]
+pub extern "C" fn testing_cspr_transfer() {
+    let caller_purse: URef = runtime::get_named_arg("purse");
+    let amount: U256 = runtime::get_named_arg("amount");
+
+    if !caller_purse.is_readable()  {
+        runtime::revert(ApiError::from(27));
+    }
+
+    if !caller_purse.is_writeable()  {
+        runtime::revert(ApiError::from(28));
+    }
+
+    let key = runtime::get_key(MAIN_PURSE_KEY_NAME);
+    let key_uref = key
+        .unwrap_or_revert_with(ApiError::from(29));
+    let self_purse_uref = key_uref
+        .as_uref()
+        .unwrap_or_revert_with(ApiError::from(30));
+
+    if !self_purse_uref.is_addable() {
+        runtime::revert(ApiError::from(31));
+    }
+
+    if !self_purse_uref.is_readable() {
+        runtime::revert(ApiError::from(32));
+    }
+
+    if !self_purse_uref.is_writeable() {
+        runtime::revert(ApiError::from(33));
+    }
+
+
+    let self_purse = self_purse_uref.into_read_add_write();
+
+    // let self_purse: URef = system::create_purse();
+    let _:() = system::transfer_from_purse_to_purse(
+        caller_purse,
+        self_purse,
+        U512::from(amount.as_u128()),
+        None
+    ).unwrap_or_revert();
+}
+
+#[no_mangle]
+pub extern "C" fn testing_erc20_transfer() -> Result<(), casper_types::ApiError> {
+    let token_contract_key: Key =  runtime::get_named_arg("token");
+    let value: U256 = runtime::get_named_arg("value");
+
+    let current = runtime::get_key(MAIN_PURSE_KEY_NAME).unwrap();
+    let owner = detail::get_immediate_caller_address()?;
+    let owner_hash = owner.as_account_hash().unwrap();
+
+    // Token must be approved for router to spend.
+    let args: RuntimeArgs = runtime_args!{
+            "owner" => Key::Account(*owner_hash),
+            "recipient" => current,
+            "amount" => value
+        };
+
+    let result:Result<(), u32> = runtime::call_contract(
+        ContractHash::from(token_contract_key.into_hash().unwrap_or_default()),
+        "transfer_from",
+        args
+    );
+
+    Ok(())
+}
+
