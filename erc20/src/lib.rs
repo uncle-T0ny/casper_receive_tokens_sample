@@ -375,12 +375,16 @@ pub extern "C" fn testing_cspr_transfer() {
 
 #[no_mangle]
 pub extern "C" fn testing_erc20_transfer() -> Result<(), casper_types::ApiError> {
+    runtime::revert(ApiError::from(99));
+
     let token_contract_key: Key =  runtime::get_named_arg("token");
     let value: U256 = runtime::get_named_arg("value");
 
-    let current = runtime::get_key(MAIN_PURSE_KEY_NAME).unwrap();
-    let owner = detail::get_immediate_caller_address()?;
-    let owner_hash = owner.as_account_hash().unwrap();
+    let current = runtime::get_key(MAIN_PURSE_KEY_NAME)
+        .unwrap_or_revert_with(ApiError::from(11));
+    let owner = detail::get_immediate_caller_address().unwrap_or_revert_with(ApiError::from(12));
+    let owner_hash = owner.as_account_hash()
+        .unwrap_or_revert_with(ApiError::from(13));
 
     // Token must be approved for router to spend.
     let args: RuntimeArgs = runtime_args!{
@@ -390,10 +394,12 @@ pub extern "C" fn testing_erc20_transfer() -> Result<(), casper_types::ApiError>
         };
 
     let result:Result<(), u32> = runtime::call_contract(
-        ContractHash::from(token_contract_key.into_hash().unwrap_or_default()),
+        ContractHash::from(token_contract_key.into_hash().unwrap_or_revert_with(ApiError::from(14))),
         "transfer_from",
         args
     );
+
+    result.unwrap_or_revert_with(ApiError::from(15));
 
     Ok(())
 }
