@@ -1,4 +1,4 @@
-ALL_CONTRACTS = erc20-token
+ALL_CONTRACTS = testing
 CONTRACT_TARGET_DIR = target/wasm32-unknown-unknown/release
 
 prepare:
@@ -14,7 +14,7 @@ test: build-contracts
 
 clippy:
 	cargo clippy --all-targets -- -D warnings
-	cargo clippy --all-targets -p erc20-token --target wasm32-unknown-unknown -- -D warnings
+	cargo clippy --all-targets -p testing --target wasm32-unknown-unknown -- -D warnings
 
 check-lint: clippy
 	cargo fmt --all -- --check

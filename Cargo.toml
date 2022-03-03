@@ -1,12 +1,9 @@
 [workspace]
 members = [
-    "erc20",
-    "example/erc20-token",
-    "example/erc20-tests"
+    "testing",
 ]
 default-members = [
-    "erc20",
-    "example/erc20-tests"
+    "testing",
 ]
 
 [profile.release]
