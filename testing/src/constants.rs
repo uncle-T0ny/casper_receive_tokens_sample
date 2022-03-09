@@ -1,6 +1,6 @@
 
 /// Name of named-key for `contract`
-pub const ERC20_TOKEN_CONTRACT_KEY_NAME: &str = "receive_tokens_contract";
+pub const ERC20_TOKEN_CONTRACT_KEY_NAME: &str = "receive_tokens_contract_v1";
 /// main purse
 pub const MAIN_PURSE_KEY_NAME: &str = "main_purse";
 /// package hash

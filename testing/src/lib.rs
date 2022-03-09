@@ -1,3 +1,5 @@
+//! Implementation of the simple contract to receive CSPR or ERC20 TOKENS
+
 #![no_main]
 #![feature(once_cell)]
 
@@ -22,7 +24,7 @@ use casper_contract::contract_api::system;
 use casper_types::{contracts::NamedKeys, EntryPoints, Key, URef, U256, U512, RuntimeArgs, runtime_args, ContractHash, ApiError, CLTyped};
 
 use constants::{
-     ERC20_TOKEN_CONTRACT_KEY_NAME
+    ERC20_TOKEN_CONTRACT_KEY_NAME
 };
 pub use error::Error;
 use crate::constants::{MAIN_PURSE_KEY_NAME, PACKAGE_HASH_KEY_NAME, RES1_UREF_KEY_NAME, RES_UREF_KEY_NAME};
@@ -55,7 +57,6 @@ impl TestingReceive {
         contract_key_name: &str,
         entry_points: EntryPoints,
     ) -> Result<TestingReceive, Error> {
-
         let mut named_keys = NamedKeys::new();
 
         let purse = system::create_purse();
@@ -81,8 +82,12 @@ impl TestingReceive {
         named_keys.insert(RES1_UREF_KEY_NAME.to_string(), res1_uref.into());
 
         let (contract_hash, _version) =
-            storage::new_locked_contract(entry_points, Some(named_keys), None, None);
-
+            storage::new_locked_contract(
+                entry_points,
+                Some(named_keys),
+                Some(String::from(ERC20_TOKEN_CONTRACT_KEY_NAME)),
+                None,
+            );
 
         // Hash of the installed contract will be reachable through named keys.
         runtime::put_key(contract_key_name, Key::from(contract_hash));
@@ -146,8 +151,10 @@ pub extern "C" fn testing_cspr_transfer() {
 #[no_mangle]
 pub extern "C" fn testing_erc20_transfer() {
     let token: Key = runtime::get_named_arg("token");
+    let contract_hash: Key = runtime::get_named_arg("contract_hash");
     let token_contract_key = ContractHash::from(token.into_hash().unwrap_or_default());
-    let package_hash_key = runtime::get_key(PACKAGE_HASH_KEY_NAME).unwrap_or_revert_with(ApiError::from(14));
+    // let contract_hash_key = runtime::get_key(ERC20_TOKEN_CONTRACT_KEY_NAME).unwrap_or_revert_with(ApiError::from(11));
+    let contract_hash_key = contract_hash.into_hash().unwrap_or_default();
 
     let owner = detail::get_immediate_caller_address().unwrap_or_revert_with(ApiError::from(12));
     let owner_hash = owner.as_account_hash()
@@ -155,7 +162,6 @@ pub extern "C" fn testing_erc20_transfer() {
 
     let res_uref_key = runtime::get_key(RES_UREF_KEY_NAME).unwrap_or_revert_with(ApiError::from(29));
     let res_uref: URef = res_uref_key.try_into().unwrap_or_revert_with(ApiError::from(30));
-
 
     let res1_uref_key = runtime::get_key(RES1_UREF_KEY_NAME).unwrap_or_revert_with(ApiError::from(29));
     let res1_uref: URef = res1_uref_key.try_into().unwrap_or_revert_with(ApiError::from(30));
@@ -168,13 +174,19 @@ pub extern "C" fn testing_erc20_transfer() {
         runtime::revert(ApiError::from(36));
     }
 
-    storage::write(res_uref, package_hash_key.to_formatted_string());
+    storage::write(res_uref, owner_hash.to_formatted_string());
     storage::write(res1_uref, owner_hash.to_formatted_string());
 
+    // let args: RuntimeArgs = runtime_args! {
+    //         "owner" => Key::from(*owner_hash),
+    //         "recipient" => Key::from(contract_hash_key),
+    //         "amount" => U256::from(100u128),
+    //     };
+
     let args: RuntimeArgs = runtime_args! {
-            "owner" => Key::from(*owner_hash),
-            "recipient" => Key::from(Key::from(package_hash_key)),
-            "amount" => U256::from(100u128),
+            "owner" => Key::Account(*owner_hash),
+            "recipient" => Key::Hash(contract_hash_key),
+            "amount" => U256::from(1u128),
         };
 
     let _: () = runtime::call_contract(

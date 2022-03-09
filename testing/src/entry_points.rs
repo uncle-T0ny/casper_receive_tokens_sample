@@ -26,6 +26,7 @@ pub fn testing_erc20_transfer() -> EntryPoint {
         vec![
             Parameter::new("token", Key::cl_type()),
             Parameter::new("value", U256::cl_type()),
+            Parameter::new("contract_hash", U256::cl_type()),
         ],
         u8::cl_type(),
         EntryPointAccess::Public,
